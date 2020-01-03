@@ -28,6 +28,10 @@ func Middleware(c *gin.Context) {
 		return
 	}
 
+	//TODO: check UUID formatting
+
+	//TODO: should we check the timestamp for reasonably high values?
+
 	c.Set(InputContextKey, data)
 
 	fmt.Printf("Sanitized input: %+v\n", data)

@@ -29,5 +29,4 @@ test: unit functional
 
 db: 
 	rm -rf ./data/superman.db 
-	sqlite3 ./data/superman.db 'CREATE TABLE locations (id varchar(255) NOT NULL PRIMARY KEY, timestamp bigint UNIQUE, username varchar(255), lat float, lon float, speed int, radius int, ip string);'
-	#sqlite3 ./data/superman.db "INSERT INTO locations (id, username, timestamp) VALUES ('33765386-C644-4AA4-A34B-EF04D2BD0E59', 'jeeth', 1578020060);"
+	sqlite3 ./data/superman.db 'CREATE TABLE locations (id varchar(255) NOT NULL PRIMARY KEY, timestamp bigint UNIQUE, username varchar(255), lat float, lon float, radius int, ip string);'

@@ -24,7 +24,7 @@ type Config struct {
 type Loc struct {
 	Latitude       float64
 	Longitude      float64
-	AccuracyRadius uint16
+	AccuracyRadius int
 }
 
 // Setup is run once, to set up the database connection from the config env var
@@ -69,7 +69,7 @@ func Middleware(c *gin.Context) {
 	Location := Loc{
 		Latitude:       record.Location.Latitude,
 		Longitude:      record.Location.Longitude,
-		AccuracyRadius: record.Location.AccuracyRadius,
+		AccuracyRadius: int(record.Location.AccuracyRadius),
 	}
 	c.Set(LocationContextKey, Location)
 	fmt.Printf("Geolocation: %+v\n", Location)
