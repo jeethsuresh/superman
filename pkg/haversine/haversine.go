@@ -113,12 +113,10 @@ func GenerateResponse(c *gin.Context) {
 		Radius: location.AccuracyRadius,
 	}
 
-	fmt.Printf("%+v %+v\n", toreturn, currRow)
-
 	//Retrieve previous login data from DB based on timestamp of current record
 	prevRow := LocationRow{}
 	prevRowExists := false
-	prevRowQuery, err := db.Query("SELECT id, username, timestamp, lat, lon, radius, ip FROM locations WHERE username = ? AND timestamp > ? ORDER BY timestamp DESC LIMIT 1", currRow.Username, currRow.IPData.Timestamp)
+	prevRowQuery, err := db.Query("SELECT id, username, timestamp, lat, lon, radius, ip FROM locations WHERE username = ? AND timestamp < ? ORDER BY timestamp DESC LIMIT 1", currRow.Username, currRow.IPData.Timestamp)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 		return
@@ -131,7 +129,6 @@ func GenerateResponse(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 			return
 		}
-		fmt.Printf("%+v\n", prevRow)
 	}
 	err = prevRowQuery.Err()
 	if err != nil {
@@ -139,10 +136,9 @@ func GenerateResponse(c *gin.Context) {
 		return
 	}
 	if prevRowExists {
-		fmt.Println("found previous row")
 		//compute haversine, put speed and suspiciousness into the return struct
 		var suspicious bool
-		prevRow.IPData.Speed, suspicious = computeHaversine(prevRow.IPData.Lat, prevRow.IPData.Lon, currRow.IPData.Lat, currRow.IPData.Lon, currRow.IPData.Timestamp, prevRow.IPData.Timestamp)
+		prevRow.IPData.Speed, suspicious = computeHaversine(prevRow.IPData.Lat, prevRow.IPData.Lon, currRow.IPData.Lat, currRow.IPData.Lon, prevRow.IPData.Timestamp, currRow.IPData.Timestamp, prevRow.IPData.Radius, currRow.IPData.Radius)
 		toreturn[precedingIPAccess] = prevRow.IPData
 		toreturn[travelToCurrentGeoSuspicious] = suspicious
 	}
@@ -150,7 +146,7 @@ func GenerateResponse(c *gin.Context) {
 	//Aaaand retrieve next login data from DB based on timestamp of current record
 	nextRow := LocationRow{}
 	nextRowExists := false
-	nextRowQuery, err := db.Query("SELECT id, username, timestamp, lat, lon, radius, ip FROM locations WHERE username = ? AND timestamp < ? ORDER BY timestamp ASC LIMIT 1", currRow.Username, currRow.IPData.Timestamp)
+	nextRowQuery, err := db.Query("SELECT id, username, timestamp, lat, lon, radius, ip FROM locations WHERE username = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT 1", currRow.Username, currRow.IPData.Timestamp)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 		return
@@ -163,7 +159,6 @@ func GenerateResponse(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, map[string]interface{}{"error": err.Error()})
 			return
 		}
-		fmt.Printf("%+v\n", nextRow)
 	}
 	err = nextRowQuery.Err()
 	if err != nil {
@@ -171,10 +166,9 @@ func GenerateResponse(c *gin.Context) {
 		return
 	}
 	if nextRowExists {
-		fmt.Println("found next row")
 		//compute haversine, put speed and suspiciousness into the return struct
 		var suspicious bool
-		nextRow.IPData.Speed, suspicious = computeHaversine(currRow.IPData.Lat, currRow.IPData.Lon, nextRow.IPData.Lat, nextRow.IPData.Lon, currRow.IPData.Timestamp, nextRow.IPData.Timestamp)
+		nextRow.IPData.Speed, suspicious = computeHaversine(currRow.IPData.Lat, currRow.IPData.Lon, nextRow.IPData.Lat, nextRow.IPData.Lon, currRow.IPData.Timestamp, nextRow.IPData.Timestamp, currRow.IPData.Radius, nextRow.IPData.Radius)
 		toreturn[sebsequentIPAccess] = nextRow.IPData
 		toreturn[travelFromCurrentGeoSuspicious] = suspicious
 	}
@@ -190,7 +184,7 @@ func GenerateResponse(c *gin.Context) {
 	c.JSON(http.StatusOK, toreturn)
 }
 
-func computeHaversine(lat1, lon1, lat2, lon2 float64, currTime, prevTime int) (speed float64, suspcious bool) {
+func computeHaversine(lat1, lon1, lat2, lon2 float64, prevTime, currTime, prevRadius, currRadius int) (speed float64, suspcious bool) {
 	lat1 = lat1 * math.Pi / 180
 	lat2 = lat2 * math.Pi / 180
 	lon1 = lon1 * math.Pi / 180
@@ -199,10 +193,14 @@ func computeHaversine(lat1, lon1, lat2, lon2 float64, currTime, prevTime int) (s
 	cosinesPart := math.Cos(lat1) * math.Cos(lat2) * math.Pow(math.Sin((lon2-lon1)/2), 2)
 	sinPart := math.Pow((math.Sin(lat2-lat1) / 2), 2)
 	arcsinPart := math.Asin(math.Sqrt(sinPart + cosinesPart))
-	distance := 2 * earthRadius * arcsinPart
+	distance := float64(2*earthRadius*arcsinPart) - (float64(prevRadius) * 1.6) - (float64(currRadius) * 1.6)
+	//Edge case: radii overlap, no way to tell if this is suspicious or not as they could be in the overlapping range
+	if distance < 0 {
+		distance = 0
+	}
 
 	timeInHours := (float64(currTime) - float64(prevTime)) / 3600
-	speed = distance / timeInHours
+	speed = math.Abs(distance / timeInHours)
 	if speed > 500 {
 		return speed, true
 	}

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // InputContextKey is used in other structs to find the input data from the context
@@ -28,13 +29,13 @@ func Middleware(c *gin.Context) {
 		return
 	}
 
-	//TODO: check UUID formatting
-
+	if _, err := uuid.Parse(data.UUID); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, map[string]interface{}{"error": err.Error()})
+	}
 	//TODO: should we check the timestamp for reasonably high values?
 
 	c.Set(InputContextKey, data)
 
-	fmt.Printf("Sanitized input: %+v\n", data)
 	c.Next()
 	fmt.Println("==========================")
 }

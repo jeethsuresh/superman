@@ -72,6 +72,6 @@ func Middleware(c *gin.Context) {
 		AccuracyRadius: int(record.Location.AccuracyRadius),
 	}
 	c.Set(LocationContextKey, Location)
-	fmt.Printf("Geolocation: %+v\n", Location)
+
 	c.Next()
 }

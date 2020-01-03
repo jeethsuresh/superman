@@ -8,7 +8,7 @@ build:
 	go build -o bin/superman cmd/superman/main.go
 	
 image: 
-	docker build .
+	docker build -t superman:v1 .
 
 clean:
 	rm -rf bin/ 
@@ -22,11 +22,8 @@ fmt:
 unit:
 	./test/unit.sh
 
-functional:
-	./test/functional.sh
-
-test: unit functional
+test: unit
 
 db: 
 	rm -rf ./data/superman.db 
-	sqlite3 ./data/superman.db 'CREATE TABLE locations (id varchar(255) NOT NULL PRIMARY KEY, timestamp bigint UNIQUE, username varchar(255), lat float, lon float, radius int, ip string);'
+	sqlite3 ./data/superman.db 'CREATE TABLE locations (id varchar(255) NOT NULL PRIMARY KEY, timestamp bigint, username varchar(255), lat float, lon float, radius int, ip string);'
