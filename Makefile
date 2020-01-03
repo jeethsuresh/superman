@@ -27,3 +27,5 @@ test: unit
 db: 
 	rm -rf ./data/superman.db 
 	sqlite3 ./data/superman.db 'CREATE TABLE locations (id varchar(255) NOT NULL PRIMARY KEY, timestamp bigint, username varchar(255), lat float, lon float, radius int, ip string);'
+
+.PHONY: clean image test db

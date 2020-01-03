@@ -6,5 +6,5 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags '-linkmode external -extldflag
 FROM scratch 
 COPY --from=builder /go/src/github.com/jeethsuresh/superman/bin/superman .
 COPY --from=builder /go/src/github.com/jeethsuresh/superman/data /data
-EXPOSE 8080 8080
+EXPOSE 5000 5000
 CMD ["./superman"]
